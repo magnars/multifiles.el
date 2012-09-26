@@ -9,17 +9,37 @@ An initial attempt at "multifiles" as defined
 
 ## Usage
 
-Create a new file or buffer with `.multi.` as part of the name,
-for instance `some-functions.multi.js`. This is what activates the
-multifiles minor mode.
+Open a new buffer, insert the contents of another file like this:
 
-Type in a comment (in js that would be `//`) followed by the multifile
-header, which looks like this:
+    M-: (mf/insert-mirror "~/.emacs.d/init.el" 30 39)
 
-    //--+[ <filename> --- lines 30-48:
+which would insert the lines 30-39 in the file `~/.emacs.d/init.el`.
 
-When you type the last `:`, the contents of that other file pops up
-under the comment. You can now tweak the line numbers to get just what
-you want.
+You can then repeat that to get multiple files in the buffer. You can also
+edit the block, and the changes will be mirrored instantly in the other file.
 
-Any changes done will be instantly mirrored in the original file.
+*Be careful!* Right now the mirror only works one way. Changes in the original files
+are not currently mirrored into the multi-file. So any changes might be lost if you're
+switching back and forth.
+
+This should be fixable, but this is all I have time for tonight.
+
+## License
+
+Copyright (C) 2011 Magnar Sveen
+
+Author: Magnar Sveen <magnars@gmail.com>
+Keywords: multiple files
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
