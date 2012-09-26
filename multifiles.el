@@ -122,7 +122,8 @@
     (forward-line -2)
     (end-of-line)
     (forward-char -1)
-    (delete-char -2)
+    (while (looking-back "[0-9]")
+      (delete-char -1))
     (insert (format "%d" (mf--find-last-line o)))))
 
 (provide 'multifiles)
