@@ -13,14 +13,11 @@
 (require 'ert)
 
 (Setup
- (global-set-key (kbd "C-!") 'mf/add-region-to-multifile))
+ (global-set-key (kbd "C-!") 'mf/mirror-region-in-multifile))
 
 (Before
  (ignore-errors
    (kill-buffer "*multifile*"))
- (switch-to-buffer
-  (get-buffer-create "*multifiles-test*"))
- (erase-buffer)
  (transient-mark-mode 1)
  (cua-mode 0)
  (delete-selection-mode 0)

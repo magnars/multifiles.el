@@ -1,7 +1,9 @@
 Feature: Editing parts of multiple files in one buffer
 
   Background:
-    Given I open and erase file "/tmp/test1.txt"
+    Given I switch to buffer "*multifile*"
+    And I press "<return>"
+    And I open and erase file "/tmp/test1.txt"
     And I insert:
     """
     outside
@@ -10,15 +12,15 @@ Feature: Editing parts of multiple files in one buffer
     line c
     outside
     """
-    And I go to the front of the word "line a"
+    And I go to the front of the word "line"
     And I set the mark
-    And I go to the end of the word "line c"
+    And I go to the end of the word "c"
+    And I press "C-f"
     And I press "C-!"
 
   Scenario: Opening multi-buffer from region
     When I switch to buffer "*multifile*"
-    Then I should see "/tmp/test1.txt"
-    And I should see:
+    Then I should see:
     """
     line a
     line b
@@ -64,9 +66,9 @@ Feature: Editing parts of multiple files in one buffer
     And I switch to buffer "test1.txt"
     Then I should not see "mirror-only"
 
-#  Scenario: Editing from original file
-#    When I switch to buffer "test1.txt"
-#    And I go to the end of the word "line b"
-#    And I insert "ooya!"
-#    And I switch to buffer "*multifile*"
-#    Then I should see "booya!"
+  Scenario: Editing from original file
+    When I switch to buffer "test1.txt"
+    And I go to the end of the word "line b"
+    And I insert "ooya!"
+    And I switch to buffer "*multifile*"
+    Then I should see "booya!"

@@ -37,45 +37,61 @@
 
 ;;; Code:
 
-(defun mf/add-region-to-multifile (beg end)
+(defun mf/mirror-region-in-multifile (beg end &optional multifile-buffer)
   (interactive "r")
   (deactivate-mark)
-  (let ((file (buffer-file-name))
-        (first-line (line-number-at-pos beg))
-        (last-line (1+ (line-number-at-pos end)))
-        (buffer (current-buffer)))
-    (switch-to-buffer-other-window "*multifile*")
-    (mf/insert-mirror file first-line last-line)
+  (let ((buffer (current-buffer)))
+    (switch-to-buffer-other-window (or "*multifile*" multifile-buffer))
+    (mf--add-mirror buffer beg end)
     (switch-to-buffer-other-window buffer)))
 
-(defun mf/insert-mirror (file first-line last-line)
-  (let ((contents (mf--file-contents-between-lines)))
-    (mf--insert-header)
-    (let ((beg (point)))
-      (insert contents)
-      (mf--add-mirror-overlay beg (point)))))
+(defun mf--add-mirror (buffer beg end)
+  (let (contents original-overlay mirror-overlay)
+    (with-current-buffer buffer
+      (setq contents (buffer-substring beg end))
+      (setq original-overlay (create-original-overlay beg end)))
+    (setq beg (point))
+    (insert contents)
+    (setq end (point))
+    (setq mirror-overlay (create-mirror-overlay beg end))
+    (overlay-put mirror-overlay 'twin original-overlay)
+    (overlay-put original-overlay 'twin mirror-overlay)))
 
-(defun mf--file-contents-between-lines ()
-  (save-window-excursion
-    (let (beg end)
-      (find-file file)
+(defun create-original-overlay (beg end)
+  (let ((o (make-overlay beg end nil nil nil)))
+    (overlay-put o 'type 'mf-original)
+    (overlay-put o 'modification-hooks '(mf--on-modification))
+    (overlay-put o 'insert-in-front-hooks '(mf--on-modification))
+    (overlay-put o 'insert-behind-hooks '(mf--on-modification))
+    o))
+
+(defun create-mirror-overlay (beg end)
+  (let ((o (make-overlay beg end nil nil nil)))
+    (overlay-put o 'type 'mf-mirror)
+    (overlay-put o 'line-prefix mf--mirror-indicator)
+    (overlay-put o 'modification-hooks '(mf--on-modification))
+    (overlay-put o 'insert-in-front-hooks '(mf--on-modification))
+    (overlay-put o 'insert-behind-hooks '(mf--on-modification))
+    o))
+
+(defun mf--on-modification (o after? beg end &optional length)
+  (when (and after? (not (null (overlay-start o))))
+    (mf--update-twin o)))
+
+(defun mf--update-twin (o)
+  (let* ((beg (overlay-start o))
+         (end (overlay-end o))
+         (contents (buffer-substring beg end))
+         (twin (overlay-get o 'twin))
+         (buffer (overlay-buffer twin))
+         (beg (overlay-start twin))
+         (end (overlay-end twin)))
+    (with-current-buffer buffer
       (save-excursion
-        (goto-line first-line)
-        (setq beg (point))
-        (goto-line last-line)
-        (setq end (point))
-        (buffer-substring beg end)))))
-
-(defun mf--insert-header ()
-  (deactivate-mark)
-  (if (search-forward "--+[ " nil t)
-      (forward-line -1)
-    (end-of-buffer))
-  (newline)
-  (ignore-errors
-    (comment-dwim nil))
-  (insert (format "--+[ %s --- lines %d-%d:" file first-line last-line))
-  (newline 2))
+        (goto-char beg)
+        (insert contents)
+        (delete-char (- end beg))
+        ))))
 
 (defvar mf--mirror-indicator "| ")
 (add-text-properties
@@ -84,60 +100,6 @@
                      :background ,(format "#%02x%02x%02x" 128 128 128)))
  mf--mirror-indicator)
 
-(defun mf--add-mirror-overlay (beg end)
-  (let ((o (make-overlay beg end nil nil nil)))
-    (overlay-put o 'type 'mf-mirror)
-    (overlay-put o 'line-prefix mf--mirror-indicator)
-    (overlay-put o 'file file)
-    (overlay-put o 'first-line first-line)
-    (overlay-put o 'last-line last-line)
-    (overlay-put o 'modification-hooks '(on-mirror-modification))
-    (overlay-put o 'insert-in-front-hooks '(on-mirror-modification))
-    (overlay-put o 'insert-behind-hooks '(on-mirror-modification))))
-
-(defun on-mirror-modification (o after? beg end &optional length)
-  (when after?
-    (let ((beg (overlay-start o))
-          (end (overlay-end o)))
-      (when (not (null beg))
-        (unless (memq this-command '(undo redo undo-tree undo-tree-redo))
-          (mf--update-header o))
-        (mf--update-original-file o)
-        (overlay-put o 'last-line (mf--find-last-line o))
-        ))))
-
-(defmacro comment (&rest ignore))
-
-(defun mf--update-original-file (o)
-  (let ((file (overlay-get o 'file))
-        (first-line (overlay-get o 'first-line))
-        (last-line (overlay-get o 'last-line))
-        (contents (buffer-substring (overlay-start o) (overlay-end o))))
-    (save-window-excursion
-      (find-file file)
-      (save-excursion
-        (goto-line first-line)
-        (setq beg (point))
-        (goto-line last-line)
-        (setq end (point))
-        (delete-region beg end)
-        (insert contents)))))
-
-(defun mf--find-last-line (o)
-  (let ((first-line (line-number-at-pos (overlay-start o)))
-        (last-line (line-number-at-pos (overlay-end o))))
-    (+ (overlay-get o 'first-line)
-       (- last-line first-line))))
-
-(defun mf--update-header (o)
-  (save-excursion
-    (goto-char (overlay-start o))
-    (forward-line -2)
-    (end-of-line)
-    (forward-char -1)
-    (while (looking-back "[0-9]")
-      (delete-char -1))
-    (insert (format "%d" (mf--find-last-line o)))))
-
 (provide 'multifiles)
+
 ;;; multifiles.el ends here

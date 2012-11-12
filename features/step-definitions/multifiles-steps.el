@@ -1,7 +1,8 @@
 (Given "^I open and erase file \"\\(.+\\)\"$"
        (lambda (filename)
          (find-file filename)
-         (erase-buffer)))
+         (kill-buffer)
+         (find-file filename)))
 
 (When "^I press \"\\(.+\\)\"$"
       (lambda (keybinding)
