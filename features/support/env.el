@@ -12,8 +12,12 @@
 (require 'espuds)
 (require 'ert)
 
+(Setup
+ (global-set-key (kbd "C-!") 'mf/add-region-to-multifile))
+
 (Before
- (global-set-key (kbd "C-!") 'mf/add-region-to-multifile)
+ (ignore-errors
+   (kill-buffer "*multifile*"))
  (switch-to-buffer
   (get-buffer-create "*multifiles-test*"))
  (erase-buffer)

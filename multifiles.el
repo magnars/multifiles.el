@@ -39,12 +39,14 @@
 
 (defun mf/add-region-to-multifile (beg end)
   (interactive "r")
+  (deactivate-mark)
   (let ((file (buffer-file-name))
         (first-line (line-number-at-pos beg))
-        (last-line (1+ (line-number-at-pos end))))
-    (switch-to-buffer "*multifile*")
-    (emacs-lisp-mode)
-    (mf/insert-mirror file first-line last-line)))
+        (last-line (1+ (line-number-at-pos end)))
+        (buffer (current-buffer)))
+    (switch-to-buffer-other-window "*multifile*")
+    (mf/insert-mirror file first-line last-line)
+    (switch-to-buffer-other-window buffer)))
 
 (defun mf/insert-mirror (file first-line last-line)
   (let ((contents (mf--file-contents-between-lines)))
@@ -70,7 +72,8 @@
       (forward-line -1)
     (end-of-buffer))
   (newline)
-  (comment-dwim nil)
+  (ignore-errors
+    (comment-dwim nil))
   (insert (format "--+[ %s --- lines %d-%d:" file first-line last-line))
   (newline 2))
 
@@ -97,10 +100,10 @@
     (let ((beg (overlay-start o))
           (end (overlay-end o)))
       (when (not (null beg))
-        (unless (memq this-command '(undo undo-tree))
+        (unless (memq this-command '(undo redo undo-tree undo-tree-redo))
           (mf--update-header o))
         (mf--update-original-file o)
-        (mf--update-mirror-overlay o)
+        (overlay-put o 'last-line (mf--find-last-line o))
         ))))
 
 (defmacro comment (&rest ignore))
@@ -125,9 +128,6 @@
         (last-line (line-number-at-pos (overlay-end o))))
     (+ (overlay-get o 'first-line)
        (- last-line first-line))))
-
-(defun mf--update-mirror-overlay (o)
-  (overlay-put o 'last-line (mf--find-last-line o)))
 
 (defun mf--update-header (o)
   (save-excursion
