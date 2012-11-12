@@ -37,6 +37,15 @@
 
 ;;; Code:
 
+(defun mf/add-region-to-multifile (beg end)
+  (interactive "r")
+  (let ((file (buffer-file-name))
+        (first-line (line-number-at-pos beg))
+        (last-line (1+ (line-number-at-pos end))))
+    (switch-to-buffer "*multifile*")
+    (emacs-lisp-mode)
+    (mf/insert-mirror file first-line last-line)))
+
 (defun mf/insert-mirror (file first-line last-line)
   (let ((contents (mf--file-contents-between-lines)))
     (mf--insert-header)
@@ -57,6 +66,10 @@
 
 (defun mf--insert-header ()
   (deactivate-mark)
+  (if (search-forward "--+[ " nil t)
+      (forward-line -1)
+    (end-of-buffer))
+  (newline)
   (comment-dwim nil)
   (insert (format "--+[ %s --- lines %d-%d:" file first-line last-line))
   (newline 2))

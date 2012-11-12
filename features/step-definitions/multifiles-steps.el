@@ -1,3 +1,8 @@
+(Given "^I open and erase file \"\\(.+\\)\"$"
+       (lambda (filename)
+         (find-file filename)
+         (erase-buffer)))
+
 (When "^I press \"\\(.+\\)\"$"
       (lambda (keybinding)
         (let ((macro (edmacro-parse-keys keybinding)))

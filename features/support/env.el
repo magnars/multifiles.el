@@ -8,11 +8,12 @@
 (add-to-list 'load-path multifiles-util-path)
 (add-to-list 'load-path (expand-file-name "espuds" multifiles-util-path))
 
-(require 'multiple-cursors)
+(require 'multifiles)
 (require 'espuds)
 (require 'ert)
 
 (Before
+ (global-set-key (kbd "C-!") 'mf/add-region-to-multifile)
  (switch-to-buffer
   (get-buffer-create "*multifiles-test*"))
  (erase-buffer)
