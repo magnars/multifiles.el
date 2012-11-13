@@ -15,7 +15,6 @@ Feature: Editing parts of multiple files in one buffer
     And I go to the front of the word "line"
     And I set the mark
     And I go to the end of the word "c"
-    And I press "C-f"
     And I press "C-!"
 
   Scenario: Opening multi-buffer from region
@@ -104,3 +103,17 @@ Feature: Editing parts of multiple files in one buffer
     And I insert "mirror-only"
     And I switch to buffer "*multifile*"
     Then I should not see "mirror-only"
+
+  Scenario: Removing mirror
+    When I switch to buffer "*multifile*"
+    And I press "C-x h"
+    And I press "C-w"
+    And I switch to buffer "test1.txt"
+    Then I should see:
+    """
+    outside
+    line a
+    line b
+    line c
+    outside
+    """

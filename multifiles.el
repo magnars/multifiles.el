@@ -50,15 +50,21 @@
     (with-current-buffer buffer
       (setq contents (buffer-substring beg end))
       (setq original-overlay (create-original-overlay beg end)))
-    (setq beg (point))
-    (insert contents)
-    (setq end (point))
+    (mf--insert-contents)
     (setq mirror-overlay (create-mirror-overlay beg end))
     (overlay-put mirror-overlay 'twin original-overlay)
     (overlay-put original-overlay 'twin mirror-overlay)))
 
+(defun mf--insert-contents ()
+  (end-of-buffer)
+  (newline)
+  (setq beg (point))
+  (insert contents)
+  (setq end (point))
+  (newline 2))
+
 (defun create-original-overlay (beg end)
-  (let ((o (make-overlay beg end nil nil nil)))
+  (let ((o (make-overlay beg end nil nil t)))
     (overlay-put o 'type 'mf-original)
     (overlay-put o 'modification-hooks '(mf--on-modification))
     (overlay-put o 'insert-in-front-hooks '(mf--on-modification))
@@ -66,7 +72,7 @@
     o))
 
 (defun create-mirror-overlay (beg end)
-  (let ((o (make-overlay beg end nil nil nil)))
+  (let ((o (make-overlay beg end nil nil t)))
     (overlay-put o 'type 'mf-mirror)
     (overlay-put o 'line-prefix mf--mirror-indicator)
     (overlay-put o 'modification-hooks '(mf--on-modification))
@@ -74,8 +80,15 @@
     (overlay-put o 'insert-behind-hooks '(mf--on-modification))
     o))
 
-(defun mf--on-modification (o after? beg end &optional length)
-  (when (and after? (not (null (overlay-start o))))
+(defvar mf--overlay-size nil)
+
+(defun mf--on-modification (o after? beg end &optional delete-length)
+  (when (not after?)
+    (when (and (<= beg (overlay-start o))
+               (>= end (overlay-end o)))
+      (delete-overlay (overlay-get o 'twin))
+      (delete-overlay o)))
+  (when after?
     (mf--update-twin o)))
 
 (defun mf--update-twin (o)
