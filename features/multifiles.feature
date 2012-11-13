@@ -72,3 +72,35 @@ Feature: Editing parts of multiple files in one buffer
     And I insert "ooya!"
     And I switch to buffer "*multifile*"
     Then I should see "booya!"
+
+  Scenario: Editing from original, beginning
+    When I switch to buffer "test1.txt"
+    And I go to the front of the word "a"
+    And I press "M-b"
+    And I insert "sp"
+    And I switch to buffer "*multifile*"
+    Then I should see "spline a"
+
+  Scenario: Editing from original, end
+    When I switch to buffer "test1.txt"
+    And I go to the end of the word "c"
+    And I insert "ool"
+    And I switch to buffer "*multifile*"
+    Then I should see "cool"
+
+  Scenario: Editing from original, outside top
+    When I switch to buffer "test1.txt"
+    And I go to the front of the word "a"
+    And I press "M-b"
+    And I press "C-b"
+    And I insert "mirror-only"
+    And I switch to buffer "*multifile*"
+    Then I should not see "mirror-only"
+
+  Scenario: Editing from original, outside bottom
+    When I switch to buffer "test1.txt"
+    And I go to the end of the word "c"
+    And I press "C-f"
+    And I insert "mirror-only"
+    And I switch to buffer "*multifile*"
+    Then I should not see "mirror-only"
