@@ -45,12 +45,12 @@
     (with-current-buffer buffer
       (setq contents (buffer-substring beg end))
       (setq original-overlay (create-original-overlay beg end)))
-    (mf--insert-contents)
+    (mf---insert-contents)
     (setq mirror-overlay (create-mirror-overlay beg end))
     (overlay-put mirror-overlay 'twin original-overlay)
     (overlay-put original-overlay 'twin mirror-overlay)))
 
-(defun mf--insert-contents ()
+(defun mf---insert-contents ()
   (end-of-buffer)
   (newline)
   (setq beg (point))
@@ -79,12 +79,32 @@
 
 (defun mf--on-modification (o after? beg end &optional delete-length)
   (when (not after?)
-    (when (and (<= beg (overlay-start o))
-               (>= end (overlay-end o)))
-      (delete-overlay (overlay-get o 'twin))
-      (delete-overlay o)))
-  (when after?
+    (when (mf---removed-entire-overlay)
+      (mf--remove-mirror o)))
+
+  (when (and after? (not (null (overlay-start o))))
     (mf--update-twin o)))
+
+(defun mf---removed-entire-overlay ()
+  (and (<= beg (overlay-start o))
+       (>= end (overlay-end o))))
+
+(defun mf--remove-mirror (o)
+  (let* ((twin (overlay-get o 'twin))
+         (original (if (mf--is-original o) o twin))
+         (mirror (if (mf--is-original o) twin o))
+         (mirror-beg (overlay-start mirror))
+         (mirror-end (overlay-end mirror)))
+    (with-current-buffer (overlay-buffer mirror)
+      (save-excursion
+        (delete-overlay mirror)
+        (delete-region mirror-beg mirror-end)
+        (goto-char mirror-beg)
+        (delete-blank-lines)))
+    (delete-overlay original)))
+
+(defun mf--is-original (o)
+  (equal 'mf-original (overlay-get o 'type)))
 
 (defun mf--update-twin (o)
   (let* ((beg (overlay-start o))

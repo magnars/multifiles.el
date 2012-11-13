@@ -117,3 +117,15 @@ Feature: Editing parts of multiple files in one buffer
     line c
     outside
     """
+
+  Scenario: Removing original
+    And I switch to buffer "test1.txt"
+    And I press "C-x h"
+    And I press "C-w"
+    When I switch to buffer "*multifile*"
+    Then I should not see:
+    """
+    line a
+    line b
+    line c
+    """
