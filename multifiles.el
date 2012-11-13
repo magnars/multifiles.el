@@ -20,20 +20,15 @@
 
 ;;; Commentary:
 
-;; Open a new buffer, insert the contents of another file like this:
-;;
-;;     M-: (mf/insert-mirror "~/.emacs.d/init.el" 30 39)
-;;
-;; which would insert the lines 30-39 in the file `~/.emacs.d/init.el`.
-;;
-;; You can then repeat that to get multiple files in the buffer. You can also
-;; edit the block, and the changes will be mirrored instantly in the other file.
-;;
-;; *Be careful!* Right now the mirror only works one way. Changes in the original files
-;; are not currently mirrored into the multi-file. So any changes might be lost if you're
-;; switching back and forth.
-;;
-;; This should be fixable, but this is all I have time for tonight.
+;; Bind a key to `mf/mirror-region-in-multifile`, let's say `C-!`. Now
+;; mark a part of the buffer and press it. A new \*multifile\* buffer pops
+;; up. Mark some other part of another file, and press `C-!` again. This
+;; is added to the \*multifile\*.
+
+;; You can now edit the \*multifile\* buffer, and watch the original files change.
+;; Or you can edit the original files and watch the \*multifile\* buffer change.
+
+;; **Warning** This API and functionality is highly volatile.
 
 ;;; Code:
 
