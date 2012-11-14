@@ -129,3 +129,17 @@ Feature: Editing parts of multiple files in one buffer
     line b
     line c
     """
+
+  Scenario: Support for delete-selection-mode
+    Given I turn on delete-selection-mode
+    And I switch to buffer "test1.txt"
+    And I go to the end of the word "a"
+    And I insert "ff"
+    And I select "line b"
+    And I press "f"
+    Then I should see:
+    """
+    line aff
+    f
+    line c
+    """

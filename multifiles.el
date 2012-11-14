@@ -32,6 +32,8 @@
 
 ;;; Code:
 
+(require 'dash)
+
 (defun mf/mirror-region-in-multifile (beg end &optional multifile-buffer)
   (interactive "r")
   (deactivate-mark)
@@ -42,7 +44,9 @@
 
 (defun mf--add-mirror (buffer beg end)
   (let (contents original-overlay mirror-overlay)
+    (mf--add-hook-if-necessary)
     (with-current-buffer buffer
+      (mf--add-hook-if-necessary)
       (setq contents (buffer-substring beg end))
       (setq original-overlay (create-original-overlay beg end)))
     (mf---insert-contents)
@@ -57,6 +61,18 @@
   (insert contents)
   (setq end (point))
   (newline 2))
+
+(defun mf--any-overlays-in-buffer ()
+  (--any? (memq (overlay-get it 'type) '(mf-original mf-mirror))
+          (overlays-in (point-min) (point-max))))
+
+(defun mf--add-hook-if-necessary ()
+  (unless (mf--any-overlays-in-buffer)
+    (add-hook 'post-command-hook 'mf--update-twins)))
+
+(defun mf--remove-hook-if-necessary ()
+  (unless (mf--any-overlays-in-buffer)
+    (remove-hook 'post-command-hook 'mf--update-twins)))
 
 (defun create-original-overlay (beg end)
   (let ((o (make-overlay beg end nil nil t)))
@@ -75,7 +91,8 @@
     (overlay-put o 'insert-behind-hooks '(mf--on-modification))
     o))
 
-(defvar mf--overlay-size nil)
+(defvar mf--changed-overlays nil)
+(make-variable-buffer-local 'mf--changed-overlays)
 
 (defun mf--on-modification (o after? beg end &optional delete-length)
   (when (not after?)
@@ -83,11 +100,16 @@
       (mf--remove-mirror o)))
 
   (when (and after? (not (null (overlay-start o))))
-    (mf--update-twin o)))
+    (add-to-list 'mf--changed-overlays o)))
 
 (defun mf---removed-entire-overlay ()
   (and (<= beg (overlay-start o))
        (>= end (overlay-end o))))
+
+(defun mf--update-twins ()
+  (when mf--changed-overlays
+    (-each mf--changed-overlays 'mf--update-twin)
+    (setq mf--changed-overlays nil)))
 
 (defun mf--remove-mirror (o)
   (let* ((twin (overlay-get o 'twin))
@@ -100,8 +122,10 @@
         (delete-overlay mirror)
         (delete-region mirror-beg mirror-end)
         (goto-char mirror-beg)
-        (delete-blank-lines)))
-    (delete-overlay original)))
+        (delete-blank-lines)
+        (mf--remove-hook-if-necessary)))
+    (delete-overlay original)
+    (mf--remove-hook-if-necessary)))
 
 (defun mf--is-original (o)
   (equal 'mf-original (overlay-get o 'type)))
