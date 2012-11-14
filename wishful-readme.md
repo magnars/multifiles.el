@@ -9,17 +9,12 @@ An initial attempt at "multifiles" as defined
 
 ## Usage
 
-Create a new file or buffer with `.multi.` as part of the name,
-for instance `some-functions.multi.js`. This is what activates the
-multifiles minor mode.
+Bind a key to `mf/mirror-region-lines-in-multifile`, let's say `C-!`. Now
+mark a part of the buffer and press it. A new \*multifile\* buffer pops
+up. Mark some other part of another file, and press `C-!` again. This
+is added to the \*multifile\*.
 
-Type in a comment (in js that would be `//`) followed by the multifile
-header, which looks like this:
+You can now edit the \*multifile\* buffer, and watch the original files change.
+Or you can edit the original files and watch the \*multifile\* buffer change.
 
-    //--+[ <filename> --- lines 30-48:
-
-When you type the last `:`, the contents of that other file pops up
-under the comment. You can now tweak the line numbers to get just what
-you want.
-
-Any changes done will be instantly mirrored in the original file.
+Saving in the \*multifile\* buffer saves all the original files.
