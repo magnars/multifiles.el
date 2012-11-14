@@ -36,3 +36,8 @@
           (assert search nil "The text '%s' was not found in the current buffer." text))
         (set-mark (point))
         (re-search-forward text)))
+
+(Then "^the major-mode should be \"\\(.+\\)\"$"
+      (lambda (mode)
+        (assert (string= (symbol-name major-mode) mode) nil
+                "The major mode should be %s but was %S." mode major-mode)))

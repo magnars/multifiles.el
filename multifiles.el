@@ -37,8 +37,10 @@
 (defun mf/mirror-region-in-multifile (beg end &optional multifile-buffer)
   (interactive "r")
   (deactivate-mark)
-  (let ((buffer (current-buffer)))
+  (let ((buffer (current-buffer))
+        (mode major-mode))
     (switch-to-buffer-other-window (or "*multifile*" multifile-buffer))
+    (funcall mode)
     (mf--add-mirror buffer beg end)
     (switch-to-buffer-other-window buffer)))
 

@@ -3,7 +3,7 @@ Feature: Editing parts of multiple files in one buffer
   Background:
     Given I switch to buffer "*multifile*"
     And I press "<return>"
-    And I open and erase file "/tmp/test1.txt"
+    And I open and erase file "/tmp/test1.rb"
     And I insert:
     """
     outside
@@ -30,7 +30,7 @@ Feature: Editing parts of multiple files in one buffer
     When I switch to buffer "*multifile*"
     And I go to the end of the word "line b"
     And I insert "ooya!"
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     Then I should see "booya!"
 
   Scenario: Editing from multifile, beginning
@@ -38,14 +38,14 @@ Feature: Editing parts of multiple files in one buffer
     And I go to the front of the word "a"
     And I press "M-b"
     And I insert "sp"
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     Then I should see "spline a"
 
   Scenario: Editing from multifile, end
     When I switch to buffer "*multifile*"
     And I go to the end of the word "c"
     And I insert "ool"
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     Then I should see "cool"
 
   Scenario: Editing from multifile, outside top
@@ -54,7 +54,7 @@ Feature: Editing parts of multiple files in one buffer
     And I press "M-b"
     And I press "C-b"
     And I insert "mirror-only"
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     Then I should not see "mirror-only"
 
   Scenario: Editing from multifile, outside bottom
@@ -62,18 +62,18 @@ Feature: Editing parts of multiple files in one buffer
     And I go to the end of the word "c"
     And I press "C-f"
     And I insert "mirror-only"
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     Then I should not see "mirror-only"
 
   Scenario: Editing from original file
-    When I switch to buffer "test1.txt"
+    When I switch to buffer "test1.rb"
     And I go to the end of the word "line b"
     And I insert "ooya!"
     And I switch to buffer "*multifile*"
     Then I should see "booya!"
 
   Scenario: Editing from original, beginning
-    When I switch to buffer "test1.txt"
+    When I switch to buffer "test1.rb"
     And I go to the front of the word "a"
     And I press "M-b"
     And I insert "sp"
@@ -81,14 +81,14 @@ Feature: Editing parts of multiple files in one buffer
     Then I should see "spline a"
 
   Scenario: Editing from original, end
-    When I switch to buffer "test1.txt"
+    When I switch to buffer "test1.rb"
     And I go to the end of the word "c"
     And I insert "ool"
     And I switch to buffer "*multifile*"
     Then I should see "cool"
 
   Scenario: Editing from original, outside top
-    When I switch to buffer "test1.txt"
+    When I switch to buffer "test1.rb"
     And I go to the front of the word "a"
     And I press "M-b"
     And I press "C-b"
@@ -97,7 +97,7 @@ Feature: Editing parts of multiple files in one buffer
     Then I should not see "mirror-only"
 
   Scenario: Editing from original, outside bottom
-    When I switch to buffer "test1.txt"
+    When I switch to buffer "test1.rb"
     And I go to the end of the word "c"
     And I press "C-f"
     And I insert "mirror-only"
@@ -108,7 +108,7 @@ Feature: Editing parts of multiple files in one buffer
     When I switch to buffer "*multifile*"
     And I press "C-x h"
     And I press "C-w"
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     Then I should see:
     """
     outside
@@ -119,7 +119,7 @@ Feature: Editing parts of multiple files in one buffer
     """
 
   Scenario: Removing original
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     And I press "C-x h"
     And I press "C-w"
     When I switch to buffer "*multifile*"
@@ -132,7 +132,7 @@ Feature: Editing parts of multiple files in one buffer
 
   Scenario: Support for delete-selection-mode
     Given I turn on delete-selection-mode
-    And I switch to buffer "test1.txt"
+    And I switch to buffer "test1.rb"
     And I go to the end of the word "a"
     And I insert "ff"
     And I select "line b"
@@ -143,3 +143,7 @@ Feature: Editing parts of multiple files in one buffer
     f
     line c
     """
+
+  Scenario: Same major mode as first original
+    When I switch to buffer "*multifile*"
+    Then the major-mode should be "ruby-mode"
