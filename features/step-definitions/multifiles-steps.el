@@ -41,3 +41,8 @@
       (lambda (mode)
         (assert (string= (symbol-name major-mode) mode) nil
                 "The major mode should be %s but was %S." mode major-mode)))
+
+(Then "^the buffer should be saved$"
+       (lambda ()
+         (assert (not (buffer-modified-p)) nil
+                 "The buffer should be saved, but was modified.")))

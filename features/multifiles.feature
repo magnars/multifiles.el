@@ -147,3 +147,11 @@ Feature: Editing parts of multiple files in one buffer
   Scenario: Same major mode as first original
     When I switch to buffer "*multifile*"
     Then the major-mode should be "ruby-mode"
+
+  Scenario: Saving original files
+    When I switch to buffer "*multifile*"
+    And I go to the end of the word "line b"
+    And I insert "ooya!"
+    And I press "C-x C-s yes"
+    And I switch to buffer "test1.rb"
+    Then the buffer should be saved

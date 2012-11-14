@@ -17,6 +17,8 @@ is added to the \*multifile\*.
 You can now edit the \*multifile\* buffer, and watch the original files change.
 Or you can edit the original files and watch the \*multifile\* buffer change.
 
+Saving the \*multifile\* buffer will save all the original files.
+
 **Warning** This API and functionality is highly volatile.
 
 ## License

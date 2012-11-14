@@ -41,8 +41,35 @@
         (mode major-mode))
     (switch-to-buffer-other-window (or "*multifile*" multifile-buffer))
     (funcall mode)
+    (multifiles-minor-mode 1)
     (mf--add-mirror buffer beg end)
     (switch-to-buffer-other-window buffer)))
+
+(defvar multifiles-minor-mode-map nil
+  "Keymap for multifiles minor mode.")
+
+(unless multifiles-minor-mode-map
+  (setq multifiles-minor-mode-map (make-sparse-keymap)))
+
+(define-key multifiles-minor-mode-map (vector 'remap 'save-buffer) 'mf/save-original-buffers)
+
+(defun mf/save-original-buffers ()
+  (interactive)
+  (when (yes-or-no-p "Are you sure you want to save all original files?")
+    (--each (mf--original-buffers)
+      (with-current-buffer it
+        (when buffer-file-name
+          (save-buffer))))))
+
+(defun mf--original-buffers ()
+  (->> (overlays-in (point-min) (point-max))
+    (--filter (equal 'mf-mirror (overlay-get it 'type)))
+    (--map (overlay-buffer (overlay-get it 'twin)))
+    (-distinct)))
+
+(define-minor-mode multifiles-minor-mode
+  "A minor mode for the *multifile* buffer."
+  nil "" multifiles-minor-mode-map)
 
 (defun mf--add-mirror (buffer beg end)
   (let (contents original-overlay mirror-overlay)
