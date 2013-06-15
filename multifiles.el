@@ -35,11 +35,13 @@
 (require 'dash)
 
 (defun mf/mirror-region-in-multifile (beg end &optional multifile-buffer)
-  (interactive "r")
+  (interactive (list (region-beginning) (region-end)
+                     (when current-prefix-arg
+                       (read-buffer "Mirror into buffer: " "*multifile*"))))
   (deactivate-mark)
   (let ((buffer (current-buffer))
         (mode major-mode))
-    (switch-to-buffer-other-window (or "*multifile*" multifile-buffer))
+    (switch-to-buffer-other-window (or multifile-buffer "*multifile*"))
     (funcall mode)
     (multifiles-minor-mode 1)
     (mf--add-mirror buffer beg end)
