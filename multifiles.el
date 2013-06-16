@@ -124,6 +124,11 @@ if negative."
 
 (define-key multifiles-minor-mode-map [remap save-buffer] 'mf/save-original-buffers)
 
+(defadvice kill-buffer (before remove-mirrors activate)
+  (->> (overlays-in (point-min) (point-max))
+    (--filter (memq (overlay-get it 'type) '(mf-original mf-mirror)))
+    (-map 'mf--remove-mirror)))
+
 (defun mf/save-original-buffer ()
   "Save the original buffer of the mirror region under point."
   (interactive)
