@@ -35,6 +35,15 @@
 (require 'dash)
 
 (defun mf/mirror-region-in-multifile (beg end &optional multifile-buffer)
+  "Mirror the region between BEG and END into *multifile* buffer.
+
+If called with \\[universal-argument], prompt the user for the buffer where the
+region is added.
+
+In both cases, the region is added to the end of the buffer.
+Editing this region will automatically update the original buffer
+as well.  Editing the region in the original file will also
+update the mirror buffers."
   (interactive (list (region-beginning) (region-end)
                      (when current-prefix-arg
                        (read-buffer "Mirror into buffer: " "*multifile*"))))
@@ -46,6 +55,69 @@
     (multifiles-minor-mode 1)
     (mf--add-mirror buffer beg end)
     (switch-to-buffer-other-window buffer)))
+
+(defun mf/remove-mirror-region-in-multifile (&optional pos)
+  "Remove the twin overlays under the cursor.  Can be called
+either in original or mirror buffer.
+
+If optional argument POS is provided, remove the twin overlays
+found at that position."
+  (interactive)
+  (setq pos (or pos (point)))
+  (let ((ovs (--filter
+              (memq (overlay-get it 'type) '(mf-original mf-mirror))
+              (overlays-at pos))))
+    (-each ovs 'mf--remove-mirror)))
+
+(defun mf/transpose-mirror-regions (&optional arg)
+  "Exchange the mirror region under point with the one following it.
+
+If ARG is provided, transpose ARG following regions, or preceding
+if negative."
+  (interactive "p")
+  (let* ((n (abs arg))
+         (dir (/ arg n))
+         (cur (mf--current-mirror-overlay))
+         (offset (and cur (- (point) (overlay-start cur)))))
+    (when cur
+      (while (< 0 n)
+        (let* ((next (mf--next-overlay dir))
+               (cs (overlay-start cur))
+               (ns (and next (overlay-start next))))
+          (if (not next)
+              (setq n -1)
+            (if (> dir 0)
+                (progn
+                  (save-excursion (goto-char (1- ns)) (insert "\n"))
+                  (mf--move-overlay cur ns)
+                  (mf--move-overlay next cs)
+                  (save-excursion (goto-char (overlay-end cur)) (delete-char 1)))
+              (save-excursion (goto-char (1- cs)) (insert "\n"))
+              (mf--move-overlay next cs)
+              (mf--move-overlay cur ns)
+              (save-excursion (goto-char (overlay-end next)) (delete-char 1)))
+            (goto-char (+ (overlay-start cur) offset))
+            (setq n (1- n))))))))
+
+(defun mf/jump-to-twin (o)
+  "Jump to the twin buffer."
+  (interactive (list
+                (cond
+                 ((mf--current-mirror-overlay))
+                 ((let ((orig (mf--current-original-overlay)))
+                    (when orig
+                      (if (> (length orig) 1)
+                          (let ((buf (completing-read
+                                      "Jump to mirror in buffer: "
+                                      (--map (buffer-name (overlay-buffer (overlay-get it 'twin))) orig)
+                                      nil t)))
+                            (--first (equal (buffer-name (overlay-buffer (overlay-get it 'twin))) buf) orig))
+                        (car orig))))))))
+  (when o
+    (let ((twin (overlay-get o 'twin))
+          (offset (- (point) (overlay-start o))))
+      (switch-to-buffer-other-window (overlay-buffer twin))
+      (goto-char (+ (overlay-start twin) offset)))))
 
 (defvar multifiles-minor-mode-map nil
   "Keymap for multifiles minor mode.")
@@ -122,6 +194,16 @@
     (overlay-put o 'insert-behind-hooks '(mf--on-modification))
     o))
 
+(defun mf--current-mirror-overlay (&optional pos)
+  "Return the mirror overlay at POS.  Defaults to (point)."
+  (setq pos (or pos (point)))
+  (car (--filter (eq (overlay-get it 'type) 'mf-mirror) (overlays-at pos))))
+
+(defun mf--current-original-overlay (&optional pos)
+  "Return list of original overlays at POS.  Defaults to (point)."
+  (setq pos (or pos (point)))
+  (--filter (eq (overlay-get it 'type) 'mf-original) (overlays-at pos)))
+
 (defvar mf--changed-overlays nil)
 (make-variable-buffer-local 'mf--changed-overlays)
 
@@ -162,19 +244,19 @@
   (equal 'mf-original (overlay-get o 'type)))
 
 (defun mf--update-twin (o)
-  (let* ((beg (overlay-start o))
-         (end (overlay-end o))
-         (contents (buffer-substring beg end))
-         (twin (overlay-get o 'twin))
-         (buffer (overlay-buffer twin))
-         (beg (overlay-start twin))
-         (end (overlay-end twin)))
-    (with-current-buffer buffer
-      (save-excursion
-        (goto-char beg)
-        (insert contents)
-        (delete-char (- end beg))
-        ))))
+  (when (overlay-start o)
+    (let* ((beg (overlay-start o))
+           (end (overlay-end o))
+           (contents (buffer-substring beg end))
+           (twin (overlay-get o 'twin))
+           (buffer (overlay-buffer twin))
+           (beg (overlay-start twin))
+           (end (overlay-end twin)))
+      (with-current-buffer buffer
+        (save-excursion
+          (goto-char beg)
+          (insert contents)
+          (delete-char (- end beg)))))))
 
 (defvar mf--mirror-indicator "| ")
 (add-text-properties
@@ -182,6 +264,51 @@
  `(face (:foreground ,(format "#%02x%02x%02x" 128 128 128)
                      :background ,(format "#%02x%02x%02x" 128 128 128)))
  mf--mirror-indicator)
+
+
+;;; navigation
+(defun mf--sort-overlays (list)
+  "Sort LIST of overlays by `overlay-start'."
+  (sort list (lambda (x y) (< (overlay-start x) (overlay-start y)))))
+
+(defun mf--move-overlay (overlay pos)
+  "Move the OVERLAY and the content of the region inside it to POS."
+  (let* ((s (overlay-start overlay))
+         (e (overlay-end overlay))
+         (len (- e s))
+         (content (buffer-substring s e)))
+    (save-excursion
+      (goto-char pos)
+      (insert content)
+      (move-overlay overlay pos (+ pos len)))
+    (if (< pos s)
+        (delete-region (+ s len) (+ e len))
+      (delete-region s e))))
+
+(defun mf--next-overlay (&optional arg)
+  "Find the next mirror overlay after point."
+  (setq arg (or arg 1))
+  (if (< 0 arg)
+      (->> (overlays-in (point-min) (point-max))
+        (--filter (eq 'mf-mirror (overlay-get it 'type)))
+        (mf--sort-overlays)
+        (--drop-while (<= (overlay-start it) (point)))
+        (-drop (1- arg))
+        (car))
+    (mf--previous-overlay (- arg))))
+
+(defun mf--previous-overlay (&optional arg)
+  "Find the previous mirror overlay before point."
+  (setq arg (or arg 1))
+  (if (< 0 arg)
+      (->> (overlays-in (point-min) (point-max))
+        (--filter (eq 'mf-mirror (overlay-get it 'type)))
+        (mf--sort-overlays)
+        (nreverse)
+        (--drop-while (>= (overlay-end it) (point)))
+        (-drop (1- arg))
+        (car))
+    (mf--next-overlay (- arg))))
 
 (provide 'multifiles)
 
