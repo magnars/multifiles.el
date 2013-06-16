@@ -201,11 +201,11 @@ current buffer."
 
 (defun mf--add-hook-if-necessary ()
   (unless (mf--any-overlays-in-buffer)
-    (add-hook 'post-command-hook 'mf--update-twins)))
+    (add-hook 'post-command-hook 'mf--update-twins nil t)))
 
 (defun mf--remove-hook-if-necessary ()
   (unless (mf--any-overlays-in-buffer)
-    (remove-hook 'post-command-hook 'mf--update-twins)))
+    (remove-hook 'post-command-hook 'mf--update-twins t)))
 
 (defun create-original-overlay (beg end)
   (let ((o (make-overlay beg end nil nil t)))
@@ -277,17 +277,44 @@ current buffer."
 (defun mf--update-twin (o)
   (when (overlay-start o)
     (let* ((beg (overlay-start o))
-           (end (overlay-end o))
-           (contents (buffer-substring beg end))
-           (twin (overlay-get o 'twin))
-           (buffer (overlay-buffer twin))
-           (beg (overlay-start twin))
-           (end (overlay-end twin)))
-      (with-current-buffer buffer
-        (save-excursion
-          (goto-char beg)
-          (insert contents)
-          (delete-char (- end beg)))))))
+           (end (overlay-end o)))
+      (when (and (<= beg (point)) (<= (point) end))
+        ;; this is an unfortunate hack to preserve the
+        ;; point. `save-excursion' doesn't work if the point is in an
+        ;; area that is removed during the editing. Therefore, we
+        ;; first insert a part before the point, then remove the
+        ;; original, then insert the rest. Feels like an emacs bug...
+        (let ((contents-b (buffer-substring beg (point)))
+              (contents-e (buffer-substring (point) end))
+              (twin (overlay-get o 'twin))
+              (cb (current-buffer)))
+          (mf--insert-text-into-twin o contents-b contents-e)
+          ;; if this buffer is a mirror buffer, get all the original
+          ;; overlays in the original buffer and mirror their twins as
+          ;; well. This is sort of "3-way merge" mirror -> orig -> all
+          ;; other mirrors
+          (when (eq (overlay-get o 'type) 'mf-mirror)
+            (let ((mirrors (with-current-buffer (overlay-buffer twin)
+                             (mf--current-original-overlay (1+ (overlay-start twin))))))
+              (--each mirrors (mf--insert-text-into-twin it contents-b contents-e cb)))))))))
+
+(defun mf--insert-text-into-twin (o contents-b contents-e &optional cb)
+  (let* ((twin (overlay-get o 'twin))
+         (buffer (overlay-buffer twin))
+         (beg (overlay-start twin))
+         (end (overlay-end twin)))
+    (with-current-buffer buffer
+      (when (not (equal cb (current-buffer)))
+        (if (and (<= beg (point)) (<= (point) end))
+            (progn
+              (goto-char beg)
+              (insert contents-b)
+              (delete-char (- end beg))
+              (save-excursion (insert contents-e)))
+          (save-excursion
+            (goto-char beg)
+            (insert contents-b contents-e)
+            (delete-char (- end beg))))))))
 
 (defvar mf--mirror-indicator "| ")
 (add-text-properties
