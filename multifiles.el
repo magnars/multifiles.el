@@ -119,21 +119,51 @@ if negative."
       (switch-to-buffer-other-window (overlay-buffer twin))
       (goto-char (+ (overlay-start twin) offset)))))
 
-(defvar multifiles-minor-mode-map nil
+(defvar multifiles-minor-mode-map (make-sparse-keymap)
   "Keymap for multifiles minor mode.")
 
-(unless multifiles-minor-mode-map
-  (setq multifiles-minor-mode-map (make-sparse-keymap)))
+(define-key multifiles-minor-mode-map [remap save-buffer] 'mf/save-original-buffers)
 
-(define-key multifiles-minor-mode-map (vector 'remap 'save-buffer) 'mf/save-original-buffers)
+(defun mf/save-original-buffer ()
+  "Save the original buffer of the mirror region under point."
+  (interactive)
+  (let ((cur (mf--current-mirror-overlay)))
+    (when cur
+      (with-current-buffer (overlay-buffer (overlay-get cur 'twin))
+        (when buffer-file-name
+          (save-buffer))))))
 
 (defun mf/save-original-buffers ()
+  "Save the original buffers of all mirror regions in current
+buffer and also current buffer, if it has some associated file.
+
+The mirror overlays are temporarily removed before saving the
+current buffer."
   (interactive)
   (when (yes-or-no-p "Are you sure you want to save all original files?")
     (--each (mf--original-buffers)
       (with-current-buffer it
         (when buffer-file-name
-          (save-buffer))))))
+          (save-buffer)))))
+  (when buffer-file-name
+    (let ((mirrors (->> (overlays-in (point-min) (point-max))
+                     (--filter (eq 'mf-mirror (overlay-get it 'type)))
+                     (mf--sort-overlays)
+                     (--map (list
+                             it
+                             (overlay-start it)
+                             (overlay-end it)
+                             (buffer-substring (overlay-start it) (1+ (overlay-end it)))))))
+          (p (point)))
+      (--each (reverse mirrors)
+        (move-overlay (nth 0 it) 1 2)
+        (delete-region (nth 1 it) (1+ (nth 2 it))))
+      (save-buffer)
+      (--each mirrors
+        (goto-char (nth 1 it))
+        (insert (nth 3 it))
+        (move-overlay (nth 0 it) (nth 1 it) (nth 2 it)))
+      (goto-char p))))
 
 (defun mf--original-buffers ()
   (->> (overlays-in (point-min) (point-max))
@@ -229,11 +259,12 @@ if negative."
          (original (if (mf--is-original o) o twin))
          (mirror (if (mf--is-original o) twin o))
          (mirror-beg (overlay-start mirror))
-         (mirror-end (overlay-end mirror)))
+         (mirror-end (overlay-end mirror))
+         (cb (current-buffer)))
     (with-current-buffer (overlay-buffer mirror)
       (save-excursion
         (delete-overlay mirror)
-        (delete-region mirror-beg mirror-end)
+        (unless (equal cb (current-buffer)) (delete-region mirror-beg mirror-end))
         (goto-char mirror-beg)
         (delete-blank-lines)
         (mf--remove-hook-if-necessary)))
