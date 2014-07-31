@@ -62,7 +62,7 @@
    (lambda (buffer)
      (with-current-buffer buffer
        (mf/mirror-region-in-multifile (point-min) (point-max))))
-   (mapcar 'find-file-noselect (dired-get-marked-files))))
+   (mapcar 'find-file (dired-get-marked-files))))
 
 (defun mf/save-original-buffers ()
   (interactive)
