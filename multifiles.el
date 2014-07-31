@@ -55,6 +55,15 @@
 
 (define-key multifiles-minor-mode-map (vector 'remap 'save-buffer) 'mf/save-original-buffers)
 
+(defun mf/dired-mirror-marked-files ()
+  "Multifile-mirror the files that are marked in a `dired' buffer."
+  (interactive)
+  (mapcar
+   (lambda (buffer)
+     (with-current-buffer buffer
+       (mf/mirror-region-in-multifile (point-min) (point-max))))
+   (mapcar 'find-file-noselect (dired-get-marked-files))))
+
 (defun mf/save-original-buffers ()
   (interactive)
   (when (yes-or-no-p "Are you sure you want to save all original files?")
