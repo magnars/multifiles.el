@@ -58,7 +58,7 @@
 (defun mf/dired-mirror-marked-files ()
   "Multifile-mirror the files that are marked in a `dired' buffer."
   (interactive)
-  (mapcar
+  (mapc
    (lambda (buffer)
      (with-current-buffer buffer
        (mf/mirror-region-in-multifile (point-min) (point-max))))
